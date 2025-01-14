@@ -15,3 +15,5 @@ FROM read_csv(getvariable('path_input') || '/rentals/*.csv');
 CREATE OR REPLACE TABLE raw_gbfs.station_information AS
 SELECT *
 FROM read_json('https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json');
+
+SELECT TSSSS
