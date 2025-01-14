@@ -1,39 +1,36 @@
-CREATE SCHEMA raw_rentals;
+-- ----------------------------------------------------------
+-- Déclaration des variables path_input pour le chemin d'accès aux fichiers d'entrée
+-- ----------------------------------------------------------
 
+-- Windows : "C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\data\"
+-- Mac : "/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data/"
 
 SET VARIABLE path_input = '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data/';
 SELECT getvariable('path_input');
 
 
--- Insertion des données avec les colonnes 'start_station_id' et 'end_station_id' en VARCHAR car ID = 76C50D7330BD4ECA pose PB
-CREATE OR REPLACE TABLE raw_rentals.rentals_v2 AS
-SELECT 
-FROM read_csv(
-    getvariable('path_input') || 'rentals/V1/*.csv', 
-    types={
-        'start_station_id': 'VARCHAR',
-        'end_station_id': 'VARCHAR'
-    }
-);
+-- ----------------------------------------------------------
+-- Essai d'insertion des données brutes GBFS
+-- ----------------------------------------------------------
 
+CREATE SCHEMA raw_gbfs;
 
 CREATE OR REPLACE TABLE raw_gbfs.station_information AS
 SELECT *
 FROM read_json('https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json');
 
--- Insertion des données avec les colonnes 'start_station_id' et 'end_station_id' en VARCHAR car ID = 76C50D7330BD4ECA pose PB
-CREATE OR REPLACE TABLE raw_rentals.rentals_v1 AS
-SELECT
-	"Duration" AS Duration,
-    "start date" AS started_at,
-    "End date" AS ended_at,
-    "Start station number" AS start_station_id,
-    "Start station" AS start_station_name,
-    "End station number" AS end_station_id,
-    "End station" AS end_station_name,
-    "Member type" AS member_casual,
-    'classic_bike' AS 'Rideable_type'
-FROM read_csv(
+
+-- ----------------------------------------------------------
+-- Insertion :  Raw data
+-- ----------------------------------------------------------
+
+-- Création du schéma raw_rentals
+CREATE SCHEMA raw_rentals;
+
+-- Insertion des données brutes depuis des fichiers CSV avec le modèle V1
+-- Modification du type des colonnes 'Start station number' et 'End station number' en VARCHAR car certaines valeurs sont des caractères
+create or replace table raw_rentals.raw_rental_v1 as 
+ SELECT *  FROM read_csv(
     getvariable('path_input') || 'rentals/V1/*.csv', 
     types={
         'Start station number': 'VARCHAR',
@@ -41,48 +38,67 @@ FROM read_csv(
     }
 );
 
-CREATE OR REPLACE TABLE raw_rentals.rentals_v1_with_coords AS
-SELECT
-    v1.Duration,
-    v1.started_at,
-    v1.ended_at,
-    v1.start_station_id,
-    v1.start_station_name,
-    v1.end_station_id,
-    v1.end_station_name,
-    v1.member_casual,
-    v1.rideable_type,
-    v2.start_lat AS start_station_lat,
-    v2.start_lng AS start_station_lng,
-    v2.end_lat AS end_station_lat,
-    v2.end_lng AS end_station_lng
-FROM raw_rentals.rentals_v1 AS v1
-INNER JOIN raw_rentals.rentals_v2 AS v2
-    ON v1.start_station_id = v2.start_station_id
-    AND v1.end_station_id = v2.end_station_id;
-
-CREATE OR REPLACE TABLE  raw_rentals.rentals_v2 AS
-SELECT
-	rideable_type,
-	started_at,
- 	ended_at,
- 	end_station_id
-	start_station_name,
-	datediff('second', started_at, ended_at)  as duration,
-	start_station_id,
-	end_station_name,
-	end_station_id,
-	start_lat,
-	start_lng,
-	end_lat,
-	end_lng,
-	member_casual
-FROM read_csv(
+-- Insertion des données brutes depuis des fichiers CSV avec le modèle V2
+-- Modification du type des colonnes 'Start station number' et 'End station number' en VARCHAR car certaines valeurs sont des caractères
+create or replace table raw_rentals.raw_rental_v2 as 
+ SELECT * 
+ FROM read_csv(
     getvariable('path_input') || 'rentals/V2/*.csv', 
     types={
         'start_station_id': 'VARCHAR',
         'end_station_id': 'VARCHAR'
-    }
+    }
 );
 
-tt
+
+----------------------------------------------
+-- Insertion :  Staging data
+----------------------------------------------
+
+-- Création du schéma stg
+CREATE SCHEMA stg;
+
+/*
+Création de la table stg.rentals à partir des tables raw_rentals.raw_rental_v1 et raw_rentals.raw_rental_v2
+Les colonnes ont été renommées pour être homogènes
+Les colonnes start_lat, start_lng, end_lat, end_lng ont été ajoutées et initialisées à null pour être homogènes avec la table raw_rentals.raw_rental_v2
+La colonne "bikeid" a été supprimée car elle n'est pas présente dans la table raw_rentals.raw_rental_v2 et n'est pas utilisée dans le reste du projet
+La colonne "ride_id" a été supprimée car elle n'est pas présente dans la table raw_rentals.raw_rental_v1 et n'est pas utilisée dans le reste du projet
+*/
+
+create or replace table stg.rentals as 
+SELECT -- Colonnes de la table raw_rentals.raw_rental_v1
+    'classic_bike' AS Rideable_type,
+    "start date" AS started_at,
+    "End date" AS ended_at,
+    "Start station number" AS start_station_id,
+    "Start station" AS start_station_name,
+    "End station number" AS end_station_id,
+    "End station" AS end_station_name,
+    null as start_lat,
+    null as start_lng,
+    null as end_lat,
+    null as end_lng,
+	"Duration" AS Duration,
+    "Member type" AS member_casual,
+    -- bikeid
+from raw_rentals.raw_rental_v1
+
+union all
+
+SELECT -- Colonnes de la table raw_rentals.raw_rental_v2
+	-- ride_id,
+	rideable_type,
+	started_at,
+	ended_at,
+	start_station_id,
+	start_station_name,
+	end_station_id,
+	end_station_name,
+	start_lat,
+	start_lng,
+	end_lat,
+	end_lng,
+	datediff('second', started_at, ended_at) as duration,
+	member_casual,
+FROM raw_rentals.raw_rental_v2;
