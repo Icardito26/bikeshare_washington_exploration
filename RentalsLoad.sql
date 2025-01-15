@@ -67,8 +67,9 @@ La colonne "ride_id" a été supprimée car elle n'est pas présente dans la tab
 */
 
 create or replace table stg.rentals as 
-SELECT -- Colonnes de la table raw_rentals.raw_rental_v1
-    'classic_bike' AS Rideable_type,
+SELECT
+    NULL AS rideable_type,
+    --null as rideable_type
     "start date" AS started_at,
     "End date" AS ended_at,
     "Start station number" AS start_station_id,
@@ -81,12 +82,12 @@ SELECT -- Colonnes de la table raw_rentals.raw_rental_v1
     null as end_lng,
 	"Duration" AS Duration,
     "Member type" AS member_casual,
-    -- bikeid
-from raw_rentals.raw_rental_v1
+  -- bikeid
 
+from raw_rentals.raw_rental_v1
 union all
 
-SELECT -- Colonnes de la table raw_rentals.raw_rental_v2
+SELECT
 	-- ride_id,
 	rideable_type,
 	started_at,
@@ -102,3 +103,92 @@ SELECT -- Colonnes de la table raw_rentals.raw_rental_v2
 	datediff('second', started_at, ended_at) as duration,
 	member_casual,
 FROM raw_rentals.raw_rental_v2;
+
+
+
+----------------------------------------------
+-- explo rapido 
+----------------------------------------------
+SELECT 
+  --YEAR(started_at) AS annee, -- Année de location
+  -- MONTH(started_at) AS mois, -- Mois de location(année confondue)
+  -- datetrunc('month', started_at) dt_mois,
+  STRFTIME('%Y-%m', started_at) AS dt_mois,  
+  COUNT(1) AS nb_rentals, -- Nbr total de locations
+  COUNT(DISTINCT start_station_id) AS nb_stations, -- Nbr de stations de départ
+  COUNT(DISTINCT start_station_name) AS nb_station_name -- Nbr de NOMS de stations de départ
+FROM stg.rentals
+GROUP BY all
+ORDER BY 1; 
+
+----------------------------------------------
+-- offload rapido : Exportation 
+----------------------------------------------
+COPY stg.rentals TO 'C:\Users\ziton\OneDrive\Bureau\BikeShare_Washington\output\rentals.parquet' 
+  (FORMAT PARQUET); 
+
+COPY stg.rentals TO 'C:\Users\ziton\OneDrive\Bureau\BikeShare_Washington\output\rentals.csv' 
+  (FORMAT CSV);
+ 
+select count(*)
+from stg.rentals;
+
+
+--------------------------------
+--md
+--------------------------------
+CREATE SCHEMA md;
+   
+CREATE OR REPLACE TABLE md.rentals AS 
+SELECT
+    rideable_type,
+    started_at,
+    ended_at,
+    start_station_id,
+    start_station_name,
+    end_station_id,
+    end_station_name,
+    start_lat,
+    start_lng,
+    end_lat,
+    end_lng,
+    duration,
+    member_casual
+FROM stg.rentals;
+
+
+UPDATE md.rentals r1
+SET
+    start_lat = (SELECT start_lat 
+                 FROM stg.rentals r2 
+                 WHERE r1.start_station_id = r2.start_station_id 
+                 AND r1.end_station_id = r2.end_station_id 
+                 AND r2.start_lat IS NOT NULL
+                 LIMIT 1),  -- Limite les résultats à 1 ligne
+    start_lng = (SELECT start_lng 
+                 FROM stg.rentals r2 
+                 WHERE r1.start_station_id = r2.start_station_id 
+                 AND r1.end_station_id = r2.end_station_id 
+                 AND r2.start_lng IS NOT NULL
+                 LIMIT 1),
+    end_lat = (SELECT end_lat 
+               FROM stg.rentals r2 
+               WHERE r1.start_station_id = r2.start_station_id 
+               AND r1.end_station_id = r2.end_station_id 
+               AND r2.end_lat IS NOT NULL
+               LIMIT 1),
+    end_lng = (SELECT end_lng 
+               FROM stg.rentals r2 
+               WHERE r1.start_station_id = r2.start_station_id 
+               AND r1.end_station_id = r2.end_station_id 
+               AND r2.end_lng IS NOT NULL
+               LIMIT 1)
+WHERE r1.start_lat IS NULL
+   OR r1.start_lng IS NULL
+   OR r1.end_lat IS NULL
+   OR r1.end_lng IS NULL;
+
+
+
+select count(*)
+from md.rentals;
