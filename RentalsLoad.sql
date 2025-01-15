@@ -188,7 +188,5 @@ WHERE r1.start_lat IS NULL
    OR r1.end_lat IS NULL
    OR r1.end_lng IS NULL;
 
-
-
 select count(*)
 from md.rentals;
