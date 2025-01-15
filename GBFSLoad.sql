@@ -188,7 +188,7 @@ FROM stg.gbfs_station_information;
 
 
 ----------------------------------------------
--- Magasin de données
+-- Magasin de données pour donnée GBFS
 ----------------------------------------------
 
 CREATE OR REPLACE TABLE md.gbfs AS 
@@ -234,6 +234,23 @@ SET
                            LIMIT 1)
 WHERE num_bikes_available IS NULL;
 
-SELECT COUNT(station_id)
-FROM stg.gbfs_station gs 
-WHERE station_id ='082547de-1f3f-11e7-bf6b-3863bb334450'
+
+CREATE OR REPLACE TABLE md.gbfs_clean AS
+SELECT *
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY station_id ORDER BY last_updated DESC) AS row_num
+    FROM md.gbfs
+) subquery
+WHERE row_num = 1;
+
+DROP TABLE md.gbfs;
+ALTER TABLE md.gbfs_clean RENAME TO gbfs;
+
+-------------------------
+--vérifier des doublons
+-------------------------
+SELECT station_id, COUNT(*)
+FROM md.gbfs
+GROUP BY station_id
+HAVING COUNT(*) > 1;
