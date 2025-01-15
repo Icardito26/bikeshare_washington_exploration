@@ -58,7 +58,7 @@ FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/s
 -- Création vue pour donnée stg concernant GBFS Station information
 -- ----------------------------------------------------------
 
-create or replace view stg.gbfs_station_status as
+create or replace view stg.gbfs_station_information as
 WITH stations AS (
     SELECT
         ville,
@@ -84,6 +84,37 @@ SELECT
     version
 FROM stations;
 
+
+-- ----------------------------------------------------------
+-- Création vue pour donnée stg concernant GBFS Station status
+-- ----------------------------------------------------------
+
+create or replace view stg.gbfs_station_status as
+WITH stations AS (
+    SELECT
+        ville,
+        unnest(stations) AS station,
+        to_timestamp(last_updated)::TIMESTAMPTZ AT TIME ZONE 
+            (CASE 
+                WHEN ville = 'washington' THEN 'America/New_York'  
+                ELSE 'Europe/Paris' 
+            END) AS last_updated,
+        ttl,
+        version
+    FROM raw_gbfs.station_status
+)
+SELECT
+	ville,
+	station->>'station_id' station_id,
+	station->>'name' "name",
+	(station->'num_bikes_available')::int num_bikes_available,
+	(station->'capacity')::int capacity,
+	ST_point((station->'lon')::numeric, (station->'lat')::numeric) geom_point,
+	station raw,
+	last_updated,
+	ttl,
+	version
+from stations;
 
 ----------------------------------------------------
 -- Insert into station_status
