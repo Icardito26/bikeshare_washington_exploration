@@ -152,3 +152,88 @@ SELECT
 	ttl,
 	version
 from stations;
+
+------------------------------------------------
+-- UNION de status et info
+------------------------------------------------
+
+create or replace view stg.gbfs_station as
+SELECT
+    ville,
+    station_id,
+    name,
+    num_bikes_available,
+    capacity,
+    geom_point,
+    raw,
+    last_updated,
+    ttl,
+    version
+FROM stg.gbfs_station_status
+
+UNION 
+
+SELECT
+    ville,
+    station_id,
+    name,
+    num_bikes_available, -- NULL par défaut dans stg.gbfs_station_information
+    capacity,
+    geom_point,
+    raw,
+    last_updated,
+    ttl,
+    version
+FROM stg.gbfs_station_information;
+
+
+----------------------------------------------
+-- Magasin de données
+----------------------------------------------
+
+CREATE OR REPLACE TABLE md.gbfs AS 
+SELECT
+    ville,
+    station_id,
+    name,
+    num_bikes_available,
+    capacity,
+    geom_point,
+    last_updated,
+    ttl,
+    version
+FROM stg.gbfs_station;
+
+UPDATE md.gbfs r1
+SET
+    name = (SELECT name 
+            FROM md.gbfs r2 
+            WHERE r1.station_id = r2.station_id 
+              AND r2.name IS NOT NULL
+            LIMIT 1),
+    capacity = (SELECT capacity 
+                FROM md.gbfs r2 
+                WHERE r1.station_id = r2.station_id 
+                  AND r2.capacity IS NOT NULL
+                LIMIT 1),
+    geom_point = (SELECT geom_point 
+                  FROM md.gbfs r2 
+                  WHERE r1.station_id = r2.station_id 
+                    AND r2.geom_point IS NOT NULL
+                  LIMIT 1)
+WHERE name IS NULL
+   OR capacity IS NULL
+   OR geom_point IS NULL;
+  
+UPDATE md.gbfs r1
+SET
+    num_bikes_available = (SELECT num_bikes_available
+                           FROM md.gbfs r2
+                           WHERE r1.station_id = r2.station_id
+                             AND r2.num_bikes_available IS NOT NULL
+                           LIMIT 1)
+WHERE num_bikes_available IS NULL;
+
+SELECT COUNT(station_id)
+FROM stg.gbfs_station gs 
+WHERE station_id ='082547de-1f3f-11e7-bf6b-3863bb334450'
