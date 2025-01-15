@@ -54,6 +54,24 @@ insert into raw_gbfs.station_information
 FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json';
 
 
+----------------------------------------------------
+-- Insert into station_information
+----------------------------------------------------
+
+create or replace table raw_gbfs.station_information as
+select 'washigton' ville, data.stations::json[] stations, last_updated, ttl, null as version
+FROM 'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json';
+
+insert into raw_gbfs.station_information
+select 'paris' ville, data.stations::json[] stations, lastUpdatedOther as last_updated,	ttl, null as version
+FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json';
+
+-- est ce que j'ai bien ingéré ??
+select *
+from stg.gbfs_station_information
+order by ville, station_id
+
+
 -- ----------------------------------------------------------
 -- Création vue pour donnée stg concernant GBFS Station information
 -- ----------------------------------------------------------
@@ -76,6 +94,7 @@ SELECT
     ville,
     station->>'station_id' AS station_id,
     station->>'name' AS name,
+    null as num_bikes_available,
     (station->'capacity')::int AS capacity,
     ST_Point((station->'lon')::numeric, (station->'lat')::numeric) AS geom_point,
     station AS raw,
@@ -83,6 +102,24 @@ SELECT
     ttl,
     version
 FROM stations;
+
+
+----------------------------------------------------
+-- Insert into station_status
+----------------------------------------------------
+
+create or replace table raw_gbfs.station_status as
+select 'washington' ville, data.stations::json[] stations, last_updated, ttl, null as version
+FROM 'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_status.json';
+
+insert into raw_gbfs.station_status
+select 'paris' ville, data.stations::json[] stations, lastUpdatedOther as last_updated,	ttl, null as version
+FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_status.json';
+
+-- est ce que j'ai bien ingéré ??
+select *
+from stg.gbfs_station_status
+order by ville, station_id
 
 
 -- ----------------------------------------------------------
@@ -115,38 +152,3 @@ SELECT
 	ttl,
 	version
 from stations;
-
-----------------------------------------------------
--- Insert into station_status
-----------------------------------------------------
-
-create or replace table raw_gbfs.station_status as
-select 'washington' ville, data.stations::json[] stations, last_updated, ttl, null as version
-FROM 'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_status.json';
-
-insert into raw_gbfs.station_status
-select 'paris' ville, data.stations::json[] stations, lastUpdatedOther as last_updated,	ttl, null as version
-FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_status.json';
-
--- est ce que j'ai bien ingéré ??
-select *
-from stg.gbfs_station_status
-order by ville, station_id
-
-
-----------------------------------------------------
--- Insert into station_information
-----------------------------------------------------
-
-create or replace table raw_gbfs.station_information as
-select 'washigton' ville, data.stations::json[] stations, last_updated, ttl, null as version
-FROM 'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json';
-
-insert into raw_gbfs.station_information
-select 'paris' ville, data.stations::json[] stations, lastUpdatedOther as last_updated,	ttl, null as version
-FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json';
-
--- est ce que j'ai bien ingéré ??
-select *
-from raw_gbfs.station_information
-order by ville

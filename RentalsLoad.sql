@@ -122,12 +122,12 @@ GROUP BY all
 ORDER BY 1; 
 
 ----------------------------------------------
--- offload rapido : Exportation 
+-- Exportation donnée Rentals
 ----------------------------------------------
-COPY stg.rentals TO 'C:\Users\ziton\OneDrive\Bureau\BikeShare_Washington\output\rentals.parquet' 
+COPY stg.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/rentals.parquet' 
   (FORMAT PARQUET); 
 
-COPY stg.rentals TO 'C:\Users\ziton\OneDrive\Bureau\BikeShare_Washington\output\rentals.csv' 
+COPY stg.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/rentals.csv' 
   (FORMAT CSV);
  
 select count(*)
