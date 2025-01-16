@@ -86,21 +86,15 @@ WITH stations AS (
                 WHEN ville = 'washington' THEN 'America/New_York'  
                 ELSE 'Europe/Paris' 
             END) AS last_updated,
-        ttl,
-        version
     FROM raw_gbfs.station_information
 )
 SELECT
     ville,
     station->>'station_id' AS station_id,
     station->>'name' AS name,
-    null as num_bikes_available,
     (station->'capacity')::int AS capacity,
     ST_Point((station->'lon')::numeric, (station->'lat')::numeric) AS geom_point,
-    station AS raw,
-    last_updated,
-    ttl,
-    version
+    last_updated
 FROM stations;
 
 
@@ -135,134 +129,37 @@ WITH stations AS (
             (CASE 
                 WHEN ville = 'washington' THEN 'America/New_York'  
                 ELSE 'Europe/Paris' 
-            END) AS last_updated,
-        ttl,
-        version
+            END) AS last_updated
     FROM raw_gbfs.station_status
 )
 SELECT
 	ville,
 	station->>'station_id' station_id,
-	station->>'name' "name",
 	(station->'num_bikes_available')::int num_bikes_available,
 	(station->'capacity')::int capacity,
-	ST_point((station->'lon')::numeric, (station->'lat')::numeric) geom_point,
-	station raw,
 	last_updated,
-	ttl,
-	version
 from stations;
 
-------------------------------------------------
--- UNION de status et info
-------------------------------------------------
+-- ----------------------------------------------------------
+-- Création table MD
+-- ----------------------------------------------------------
 
-create or replace view stg.gbfs_station as
-SELECT
-    ville,
-    station_id,
-    name,
-    num_bikes_available,
-    capacity,
-    geom_point,
-    raw,
-    last_updated,
-    ttl,
-    version
-FROM stg.gbfs_station_status
+create or replace table md.gbfs_station_information as
+Select *
+From stg.gbfs_station_information gsi; 
 
-UNION 
-
-SELECT
-    ville,
-    station_id,
-    name,
-    num_bikes_available, -- NULL par défaut dans stg.gbfs_station_information
-    capacity,
-    geom_point,
-    raw,
-    last_updated,
-    ttl,
-    version
-FROM stg.gbfs_station_information;
-
-
-----------------------------------------------
--- Magasin de données pour donnée GBFS
-----------------------------------------------
-
-CREATE OR REPLACE TABLE md.gbfs AS 
-SELECT
-    ville,
-    station_id,
-    name,
-    num_bikes_available,
-    capacity,
-    geom_point,
-    last_updated,
-    ttl,
-    version
-FROM stg.gbfs_station;
-
-UPDATE md.gbfs r1
-SET
-    name = (SELECT name 
-            FROM md.gbfs r2 
-            WHERE r1.station_id = r2.station_id 
-              AND r2.name IS NOT NULL
-            LIMIT 1),
-    capacity = (SELECT capacity 
-                FROM md.gbfs r2 
-                WHERE r1.station_id = r2.station_id 
-                  AND r2.capacity IS NOT NULL
-                LIMIT 1),
-    geom_point = (SELECT geom_point 
-                  FROM md.gbfs r2 
-                  WHERE r1.station_id = r2.station_id 
-                    AND r2.geom_point IS NOT NULL
-                  LIMIT 1)
-WHERE name IS NULL
-   OR capacity IS NULL
-   OR geom_point IS NULL;
-  
-UPDATE md.gbfs r1
-SET
-    num_bikes_available = (SELECT num_bikes_available
-                           FROM md.gbfs r2
-                           WHERE r1.station_id = r2.station_id
-                             AND r2.num_bikes_available IS NOT NULL
-                           LIMIT 1)
-WHERE num_bikes_available IS NULL;
-
-
-CREATE OR REPLACE TABLE md.gbfs_clean AS
-SELECT *
-FROM (
-    SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY station_id ORDER BY last_updated DESC) AS row_num
-    FROM md.gbfs
-) subquery
-WHERE row_num = 1;
-
-DROP TABLE md.gbfs;
-ALTER TABLE md.gbfs_clean RENAME TO gbfs;
-
-
--------------------------
---vérifier des doublons
--------------------------
-
-SELECT station_id, COUNT(*)
-FROM md.gbfs
-GROUP BY station_id
-HAVING COUNT(*) > 1;
-
+create or replace table md.gbfs_station_status as
+Select *
+From stg.gbfs_station_status gsi; 
 
 ----------------------------------------------
 -- Exportation donnée du schéma MD
 ----------------------------------------------
 
-COPY md.gbfs TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_GBFS.parquet' 
+COPY md.gbfs_station_information TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_gbfs_station_information.parquet' 
+  (FORMAT PARQUET); 
+ 
+COPY md.gbfs_station_status TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_gbfs_station_status.parquet' 
   (FORMAT PARQUET); 
 
 COPY md.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_rentals.parquet' 
