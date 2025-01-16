@@ -247,10 +247,23 @@ WHERE row_num = 1;
 DROP TABLE md.gbfs;
 ALTER TABLE md.gbfs_clean RENAME TO gbfs;
 
+
 -------------------------
 --vérifier des doublons
 -------------------------
+
 SELECT station_id, COUNT(*)
 FROM md.gbfs
 GROUP BY station_id
 HAVING COUNT(*) > 1;
+
+
+----------------------------------------------
+-- Exportation donnée du schéma MD
+----------------------------------------------
+COPY md.gbfs TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_GBFS.parquet' 
+  (FORMAT PARQUET); 
+
+COPY md.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_rentals.parquet' 
+  (FORMAT PARQUET);
+  
