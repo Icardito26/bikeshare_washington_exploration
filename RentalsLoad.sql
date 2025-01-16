@@ -190,3 +190,5 @@ WHERE r1.start_lat IS NULL
 
 select count(*)
 from md.rentals;
+
+TEST
