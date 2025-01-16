@@ -261,6 +261,7 @@ HAVING COUNT(*) > 1;
 ----------------------------------------------
 -- Exportation donnée du schéma MD
 ----------------------------------------------
+
 COPY md.gbfs TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_GBFS.parquet' 
   (FORMAT PARQUET); 
 
