@@ -5,19 +5,8 @@
 -- Windows : "C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\data\"
 -- Mac : "/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data/"
 
-SET VARIABLE path_input = '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data/';
+SET VARIABLE path_input = 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\data\';
 SELECT getvariable('path_input');
-
-
--- ----------------------------------------------------------
--- Essai d'insertion des données brutes GBFS
--- ----------------------------------------------------------
-
-CREATE SCHEMA raw_gbfs;
-
-CREATE OR REPLACE TABLE raw_gbfs.station_information AS
-SELECT *
-FROM read_json('https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json');
 
 
 -- ----------------------------------------------------------
@@ -58,6 +47,51 @@ create or replace table raw_rentals.raw_rental_v2 as
 -- Création du schéma stg
 CREATE SCHEMA stg;
 
+/*
+Création de la table stg.rentals à partir des tables raw_rentals.raw_rental_v1 et raw_rentals.raw_rental_v2
+Les colonnes ont été renommées pour être homogènes
+Les colonnes start_lat, start_lng, end_lat, end_lng ont été ajoutées et initialisées à null pour être homogènes avec la table raw_rentals.raw_rental_v2
+La colonne "bikeid" a été supprimée car elle n'est pas présente dans la table raw_rentals.raw_rental_v2 et n'est pas utilisée dans le reste du projet
+La colonne "ride_id" a été supprimée car elle n'est pas présente dans la table raw_rentals.raw_rental_v1 et n'est pas utilisée dans le reste du projet
+*/
+
+create or replace table stg.rentals as    
+SELECT
+    NULL AS rideable_type,
+    "start date" AS started_at,
+    "End date" AS ended_at,
+    "Start station number" AS start_station_id,
+    "Start station" AS start_station_name,
+    "End station number" AS end_station_id,
+    "End station" AS end_station_name,
+    null as start_lat,
+    null as start_lng,
+    null as end_lat,
+    null as end_lng,
+	"Duration" AS Duration,
+    "Member type" AS member_casual,
+
+from raw_rentals.raw_rental_v1
+
+union
+
+SELECT
+	-- ride_id,
+	rideable_type,
+	started_at,
+	ended_at,
+	start_station_id,
+	start_station_name,
+	end_station_id,
+	end_station_name,
+	start_lat,
+	start_lng,
+	end_lat,
+	end_lng,
+	datediff('second', started_at, ended_at) as duration,
+	member_casual,
+FROM raw_rentals.raw_rental_v2;
+
 
 ----------------------------------------------
 -- explo rapido 
@@ -74,24 +108,11 @@ FROM stg.rentals
 GROUP BY all
 ORDER BY 1; 
 
-----------------------------------------------
--- Exportation donnée Rentals
-----------------------------------------------
-COPY stg.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/rentals.parquet' 
-  (FORMAT PARQUET); 
-
-COPY stg.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/rentals.csv' 
-  (FORMAT CSV);
- 
-select count(*)
-from stg.rentals;
-
-
 --------------------------------
---md
+-- MD
 --------------------------------
 CREATE SCHEMA md;
-   
+
 CREATE OR REPLACE TABLE md.rentals AS 
 SELECT
     rideable_type,
@@ -109,7 +130,7 @@ SELECT
     member_casual
 FROM stg.rentals;
 
-
+-- Faire correspondre les coordonnées des stations départ et arrivée selon rentals V2
 UPDATE md.rentals r1
 SET
     start_lat = (SELECT start_lat 
@@ -141,5 +162,9 @@ WHERE r1.start_lat IS NULL
    OR r1.end_lat IS NULL
    OR r1.end_lng IS NULL;
 
-select count(*)
-from md.rentals;
+----------------------------------------------
+-- Exportation donnée du schéma MD
+----------------------------------------------
+
+COPY md.rentals TO 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\output\md_rentals.parquet' 
+  (FORMAT PARQUET);

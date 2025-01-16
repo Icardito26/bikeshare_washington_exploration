@@ -12,7 +12,7 @@ CREATE SCHEMA raw_gbfs;
 CREATE SCHEMA stg;
 
 -- Variable pour chemin dossier Data et GBFS
-set VARIABLE path_input = '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data';
+set VARIABLE path_input = 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\data\';
 SELECT getvariable('path_input');
 
 
@@ -59,7 +59,7 @@ FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/s
 ----------------------------------------------------
 
 create or replace table raw_gbfs.station_information as
-select 'washigton' ville, data.stations::json[] stations, last_updated, ttl, null as version
+select 'washington' ville, data.stations::json[] stations, last_updated, ttl, null as version
 FROM 'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json';
 
 insert into raw_gbfs.station_information
@@ -85,17 +85,19 @@ WITH stations AS (
             (CASE 
                 WHEN ville = 'washington' THEN 'America/New_York'  
                 ELSE 'Europe/Paris' 
-            END) AS last_updated,
+            END) AS last_updated
     FROM raw_gbfs.station_information
 )
 SELECT
     ville,
     station->>'station_id' AS station_id,
     station->>'name' AS name,
-    (station->'capacity')::int AS capacity,
-    ST_Point((station->'lon')::numeric, (station->'lat')::numeric) AS geom_point,
+    (station->>'capacity')::int AS capacity,
+    (station->>'lon')::numeric AS longitude,
+    (station->>'lat')::numeric AS latitude,
     last_updated
 FROM stations;
+
 
 
 ----------------------------------------------------
@@ -156,12 +158,11 @@ From stg.gbfs_station_status gsi;
 -- Exportation donnée du schéma MD
 ----------------------------------------------
 
-COPY md.gbfs_station_information TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_gbfs_station_information.parquet' 
+COPY md.gbfs_station_information TO 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\output\md_gbfs_station_information.parquet' 
   (FORMAT PARQUET); 
  
-COPY md.gbfs_station_status TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_gbfs_station_status.parquet' 
+COPY md.gbfs_station_status TO 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\output\md_gbfs_station_status.parquet' 
   (FORMAT PARQUET); 
 
-COPY md.rentals TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_rentals.parquet' 
-  (FORMAT PARQUET);
+
   
