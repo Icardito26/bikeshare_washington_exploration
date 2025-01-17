@@ -54,24 +54,6 @@ insert into raw_gbfs.station_information
 FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json';
 
 
-----------------------------------------------------
--- Insert into station_information
-----------------------------------------------------
-
-create or replace table raw_gbfs.station_information as
-select 'washington' ville, data.stations::json[] stations, last_updated, ttl, null as version
-FROM 'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/station_information.json';
-
-insert into raw_gbfs.station_information
-select 'paris' ville, data.stations::json[] stations, lastUpdatedOther as last_updated,	ttl, null as version
-FROM 'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json';
-
--- est ce que j'ai bien ingéré ??
-select *
-from stg.gbfs_station_information
-order by ville, station_id
-
-
 -- ----------------------------------------------------------
 -- Création vue pour donnée stg concernant GBFS Station information
 -- ----------------------------------------------------------

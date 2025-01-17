@@ -1,0 +1,3 @@
+-> Vérifier ville("washington" dans station_information
+-> Séparer données dans Power Bi entre Washington et Paris ??
+-> Double script insertion données GBFS : Data_Washington = FILTER(station_information, station_information[ville] = "washington")

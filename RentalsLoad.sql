@@ -5,7 +5,7 @@
 -- Windows : "C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\data\"
 -- Mac : "/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data/"
 
-SET VARIABLE path_input = 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\data\';
+SET VARIABLE path_input = '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/data/';
 SELECT getvariable('path_input');
 
 
