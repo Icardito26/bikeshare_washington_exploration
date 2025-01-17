@@ -145,6 +145,9 @@ COPY md.gbfs_station_information TO 'C:\Users\arthu\OneDrive\Cours\Exploration &
  
 COPY md.gbfs_station_status TO 'C:\Users\arthu\OneDrive\Cours\Exploration & Visualisation Données\Projet\BikeShare_Washington\output\md_gbfs_station_status.parquet' 
   (FORMAT PARQUET); 
+ 
+ COPY md.gbfs_station_information TO '/Users/arthurtran/Library/CloudStorage/OneDrive-Personnel/Cours/Exploration & Visualisation Données/Projet/BikeShare_Washington/output/md_gbfs_st_information.csv' 
+  (FORMAT CSV); 
 
 
   
