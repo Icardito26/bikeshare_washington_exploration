@@ -4,3 +4,4 @@ Projet_DBeaver/
 output/
 duckdb
 *.pbix
+*.pbit
